@@ -1,4 +1,38 @@
 {% extends "base.html" %}{% block content %}
-<div class="grid module-3"><section class="panel panel--primary"><div class="panel__head"><h2>事件去重记录</h2><span class="panel__meta">M3 · {{ data.status|default('READY') }}</span></div><div class="panel__body panel__body--scroll"><table class="ledger"><thead><tr><th>字段</th><th>值</th><th>证据</th></tr></thead><tbody>{% for key, value in data.items() %}<tr><td>{{ key }}</td><td class="num">{{ value }}</td><td>R{{ loop.index }}</td></tr>{% endfor %}</tbody></table></div></section>
-<div class="stack"><section class="panel"><div class="panel__head"><h2>原因码</h2><span class="panel__meta">{{ data.reason|default('OK') }}</span></div><div class="panel__body bars"><i style="--v:47%"></i><i style="--v:56%"></i></div></section><section class="panel"><div class="panel__head"><h2>本次动作</h2><span class="panel__meta">/api/events/dedupe</span></div><div class="panel__body"><button class="btn btn--primary" data-endpoint="/api/events/dedupe">运行 事件去重</button><pre class="result">等待运行</pre></div></section></div></div>
+<div class="grid module-3"><section class="panel panel--primary"><div class="panel__head"><h2>采信契约与批次</h2><span class="panel__meta">M3 · {{ data.status|default('READY') }}</span></div><div class="panel__body panel__body--scroll">
+<h3 class="subhead">服务契约（当前版本）</h3>
+<table class="ledger"><thead><tr><th>服务</th><th>版本</th><th>契约</th><th>说明</th></tr></thead><tbody>
+{% for c in data.contracts %}<tr><td>{{ c.service }}</td><td class="num">v{{ c.version }}</td><td>{{ c.kind }}</td><td>{{ c.note }}</td></tr>
+{% else %}<tr><td colspan="4">尚无显式契约，未登记服务按 legacy（实例内编号）默认采信</td></tr>{% endfor %}
+</tbody></table>
+<h3 class="subhead">批次（身份在导入时绑定，切换/回退不改变）</h3>
+<table class="ledger"><thead><tr><th>批次</th><th>服务</th><th>契约版本</th><th>契约</th><th>进度</th><th>状态</th></tr></thead><tbody>
+{% for b in data.batches %}<tr><td><a href="#" class="batch-link" data-batch="{{ b.batch_id }}">{{ b.batch_id }}</a></td><td>{{ b.service }}</td><td class="num">v{{ b.contract_version }}</td><td>{{ b.contract_kind }}</td><td class="num">{{ b.position }}/{{ b.total }}</td><td>{{ b.batch_status }}</td></tr>
+{% else %}<tr><td colspan="6">尚未导入真实批次</td></tr>{% endfor %}
+</tbody></table>
+<h3 class="subhead">已入账事件</h3><table class="ledger"><tbody><tr><td>ledger 身份键总数</td><td class="num" id="ledger-total">{{ data.ledger_total }}</td></tr></tbody></table>
+</div></section>
+<div class="stack">
+<section class="panel"><div class="panel__head"><h2>契约切换 / 回退</h2><span class="panel__meta">按服务采信</span></div><div class="panel__body">
+<label class="field">服务 <input id="c-service" value="pay" placeholder="service"></label>
+<label class="field">期望版本（并发保护，可空）<input id="c-expected" type="number" placeholder="expected_version"></label>
+<label class="field">切换契约 <select id="c-kind"><option value="instance">instance（服务+实例+请求号）</option><option value="legacy">legacy（实例内请求号）</option></select></label>
+<label class="field">说明 <input id="c-note" placeholder="note"></label>
+<div class="btn-row"><button class="btn btn--primary" id="btn-switch">切换契约</button></div>
+<label class="field">回退到历史版本（追加新版本，不改历史）<input id="c-target" type="number" placeholder="target_version，0=默认 legacy"></label>
+<div class="btn-row"><button class="btn" id="btn-rollback">回退契约</button></div>
+<pre class="result" id="contract-result">等待操作</pre>
+</div></section>
+<section class="panel"><div class="panel__head"><h2>导入真实批次</h2><span class="panel__meta">断点可恢复 · 重试不重复入账</span></div><div class="panel__body">
+<label class="field">服务 <input id="b-service" value="pay"></label>
+<label class="field">批次编号（重试/续传必填）<input id="b-id" placeholder="batch_id，留空自动派生"></label>
+<label class="field">期望契约版本（可空）<input id="b-expected" type="number"></label>
+<label class="field">事件 JSONL（每行一个事件）<textarea id="b-text" rows="6" placeholder='{"request_id":"r1","instance_id":"i-1","service":"pay"}'></textarea></label>
+<label class="field">中断演练：处理到第 N 行停止（可空）<input id="b-stop" type="number"></label>
+<div class="btn-row"><button class="btn btn--primary" id="btn-import">导入 / 续传批次</button></div>
+<pre class="result" id="import-result">等待运行</pre>
+</div></section>
+<section class="panel"><div class="panel__head"><h2>本次动作</h2><span class="panel__meta">/api/events/dedupe</span></div><div class="panel__body"><button class="btn" data-endpoint="/api/events/dedupe">运行样例去重（无状态）</button><pre class="result">等待运行</pre></div></section>
+</div></div>
+<script src="/static/m3_events.js"></script>
 {% endblock %}

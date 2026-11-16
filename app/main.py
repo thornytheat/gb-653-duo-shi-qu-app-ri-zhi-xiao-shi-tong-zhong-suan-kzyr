@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from .config import Settings
 from .errors import install
 from .store import Store
+from .modules.m3_events.state import EventStore
 from . import web
 from .modules.m1_logs import handler as m1_handler
 from .modules.m2_time import handler as m2_handler
@@ -16,6 +17,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="多时区应用日志小时桶重算", version=settings.rule_version)
     app.state.settings = settings
     app.state.store = Store(settings.db_path)
+    app.state.event_store = EventStore(settings.event_db_path)
     app.state.templates = web.templates
     app.mount("/static", StaticFiles(directory=str(web.BASE / "static")), name="static")
     for module in (m1_handler, m2_handler, m3_handler, m4_handler, m5_handler, m6_handler,):
